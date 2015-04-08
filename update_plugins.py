@@ -16,7 +16,6 @@ nerdtree https://github.com/scrooloose/nerdtree
 nginx.vim https://github.com/vim-scripts/nginx.vim
 open_file_under_cursor.vim https://github.com/amix/open_file_under_cursor.vim
 snipmate-snippets https://github.com/scrooloose/snipmate-snippets
-taglist.vim https://github.com/vim-scripts/taglist.vim
 tlib https://github.com/vim-scripts/tlib
 vim-addon-mw-utils https://github.com/MarcWeber/vim-addon-mw-utils
 vim-bundle-mako https://github.com/sophacles/vim-bundle-mako
@@ -39,6 +38,10 @@ syntastic https://github.com/scrooloose/syntastic
 vim-repeat https://github.com/tpope/vim-repeat
 vim-commentary https://github.com/tpope/vim-commentary
 vim-go https://github.com/fatih/vim-go
+Dockerfile.vim https://github.com/ekalinin/Dockerfile.vim
+vim-gitgutter https://github.com/airblade/vim-gitgutter
+vim-wakatime https://github.com/wakatime/vim-wakatime
+tagbar https://github.com/majutsushi/tagbar
 """.strip()
 
 GITHUB_ZIP = '%s/archive/master.zip'
