@@ -17,7 +17,7 @@ Heads Up! WakaTime depends on [Python](http://www.python.org/getit/) being insta
   or using [Pathogen](https://github.com/tpope/vim-pathogen):<br />
   `cd ~/.vim/bundle && git clone git://github.com/wakatime/vim-wakatime.git`
 
-3. Enter your [api key](https://wakatime.com/settings#apikey) from [https://wakatime.com/settings#apikey](https://wakatime.com/settings#apikey), then press `enter`.
+3. Enter your [api key](https://wakatime.com/settings#apikey), then press `enter`.
 
 4. Use Vim like you normally do and your time will be tracked for you automatically.
 
@@ -39,5 +39,9 @@ To use a custom python binary:
 
 The default is to use `python` from your system PATH.
 
-More configs can be set in your `$HOME/.wakatime.cfg` file, which will be read
-by `wakatime-cli.py`. Learn more [here](https://github.com/wakatime/wakatime#configuring).
+WakaTime plugins share a common config file `.wakatime.cfg` located in your user home directory with [these options](https://github.com/wakatime/wakatime#configuring) available.
+
+Uninstalling
+------------
+
+Remove `Bundle 'wakatime/vim-wakatime'` from your `.vimrc` file, then delete your `~/.wakatime.cfg` config file.
