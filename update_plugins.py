@@ -44,6 +44,7 @@ vim-gitgutter https://github.com/airblade/vim-gitgutter
 vim-wakatime https://github.com/wakatime/vim-wakatime
 tagbar https://github.com/majutsushi/tagbar
 ctrlsf.vim https://github.com/dyng/ctrlsf.vim
+vimerl https://github.com/jimenezrick/vimerl
 """.strip()
 
 GITHUB_ZIP = '%s/archive/master.zip'
