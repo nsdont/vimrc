@@ -6,7 +6,7 @@
 " Website:     https://wakatime.com/
 " ============================================================================
 
-let s:VERSION = '3.0.9'
+let s:VERSION = '4.0.1'
 
 
 " Init {{{
@@ -27,15 +27,22 @@ let s:VERSION = '3.0.9'
     let s:old_cpo = &cpo
     set cpo&vim
 
-    " To be backwards compatible, rename config file
-    if filereadable(expand("$HOME/.wakatime"))
-        exec "silent !mv" expand("$HOME/.wakatime") expand("$HOME/.wakatime.conf")
-    endif
-    if filereadable(expand("$HOME/.wakatime.conf"))
-        if !filereadable(expand("$HOME/.wakatime.cfg"))
-            let contents = ['[settings]'] + readfile(expand("$HOME/.wakatime.conf"), '')
-            call writefile(contents, expand("$HOME/.wakatime.cfg"))
-            call delete(expand("$HOME/.wakatime.conf"))
+    " Globals
+    let s:cli_location = expand("<sfile>:p:h") . '/packages/wakatime/cli.py'
+    let s:config_file = expand("$HOME/.wakatime.cfg")
+    let s:config_file_already_setup = 0
+
+    " For backwards compatibility, rename wakatime.conf to wakatime.cfg
+    if !filereadable(s:config_file)
+        if filereadable(expand("$HOME/.wakatime"))
+            exec "silent !mv" expand("$HOME/.wakatime") expand("$HOME/.wakatime.conf")
+        endif
+        if filereadable(expand("$HOME/.wakatime.conf"))
+            if !filereadable(s:config_file)
+                let contents = ['[settings]'] + readfile(expand("$HOME/.wakatime.conf"), '')
+                call writefile(contents, s:config_file)
+                call delete(expand("$HOME/.wakatime.conf"))
+            endif
         endif
     endif
 
@@ -49,26 +56,45 @@ let s:VERSION = '3.0.9'
         let g:wakatime_HeartbeatFrequency = 2
     endif
 
-    " Globals
-    let s:plugin_directory = expand("<sfile>:p:h") . '/'
-    let s:config_file_exists = 0
-
 " }}}
 
 
 " Function Definitions {{{
 
+    function! s:StripWhitespace(str)
+        return substitute(a:str, '^\s*\(.\{-}\)\s*$', '\1', '')
+    endfunction
+    
     function! s:SetupConfigFile()
-        if !s:config_file_exists
+        if !s:config_file_already_setup
+
             " Create config file if does not exist
-            if !filereadable(expand("$HOME/.wakatime.cfg"))
+            if !filereadable(s:config_file)
                 let key = input("[WakaTime] Enter your wakatime.com api key: ")
                 if key != ''
-                    call writefile(['[settings]', 'debug = false', printf("api_key = %s", key), 'hidefilenames = false', 'ignore =', '    ^COMMIT_EDITMSG$', '    ^TAG_EDITMSG$'], expand("$HOME/.wakatime.cfg"))
+                    call writefile(['[settings]', 'debug = false', printf("api_key = %s", key), 'hidefilenames = false', 'ignore =', '    COMMIT_EDITMSG$', '    PULLREQ_EDITMSG$', '    MERGE_MSG$', '    TAG_EDITMSG$'], s:config_file)
+                    echo "[WakaTime] Setup complete! Visit http://wakatime.com to view your logged time."
+                endif
+
+            " Make sure config file has api_key
+            else
+                let found_api_key = 0
+                let lines = readfile(s:config_file)
+                for line in lines
+                    let group = split(line, '=')
+                    if len(group) == 2 && s:StripWhitespace(group[0]) == 'api_key' && s:StripWhitespace(group[1]) != ''
+                        let found_api_key = 1
+                    endif
+                endfor
+                if !found_api_key
+                    let key = input("[WakaTime] Enter your wakatime.com api key: ")
+                    let lines = lines + [join(['api_key', key], '=')]
+                    call writefile(lines, s:config_file)
                     echo "[WakaTime] Setup complete! Visit http://wakatime.com to view your logged time."
                 endif
             endif
-            let s:config_file_exists = 1
+
+            let s:config_file_already_setup = 1
         endif
     endfunction
 
@@ -88,7 +114,7 @@ let s:VERSION = '3.0.9'
                     let python_bin = 'pythonw'
                 endif
             endif
-            let cmd = [python_bin, '-W', 'ignore', s:plugin_directory . 'packages/wakatime/cli.py']
+            let cmd = [python_bin, '-W', 'ignore', '"' . s:cli_location . '"']
             let cmd = cmd + ['--file', shellescape(targetFile)]
             let cmd = cmd + ['--plugin', shellescape(printf('vim/%d vim-wakatime/%s', v:version, s:VERSION))]
             if a:is_write
@@ -100,11 +126,11 @@ let s:VERSION = '3.0.9'
             else
                 exec 'silent !' . join(cmd, ' ') . ' &'
             endif
-            call s:SetLastAction(a:time, a:time, targetFile)
+            call s:SetLastHeartbeat(a:time, a:time, targetFile)
         endif
     endfunction
     
-    function! s:GetLastAction()
+    function! s:GetLastHeartbeat()
         if !filereadable(expand("$HOME/.wakatime.data"))
             return [0, 0, '']
         endif
@@ -115,16 +141,8 @@ let s:VERSION = '3.0.9'
         return last
     endfunction
     
-    function! s:SetLastAction(time, last_update, targetFile)
+    function! s:SetLastHeartbeat(time, last_update, targetFile)
         call writefile([substitute(printf('%d', a:time), ',', '.', ''), substitute(printf('%d', a:last_update), ',', '.', ''), a:targetFile], expand("$HOME/.wakatime.data"))
-    endfunction
-
-    function! s:GetChar()
-        let c = getchar()
-        if c =~ '^\d\+$'
-          let c = nr2char(c)
-        endif
-        return c
     endfunction
 
     function! s:EnoughTimePassed(now, last)
@@ -140,21 +158,16 @@ let s:VERSION = '3.0.9'
 
 " Event Handlers {{{
 
-    function! s:normalAction()
+    function! s:handleActivity(is_write)
         call s:SetupConfigFile()
         let targetFile = s:GetCurrentFile()
         let now = localtime()
-        let last = s:GetLastAction()
-        if s:EnoughTimePassed(now, last) || targetFile != last[2]
-            call s:Api(targetFile, now, 0, last)
+        let last = s:GetLastHeartbeat()
+        if targetFile !~ "-MiniBufExplorer-" && targetFile !~ "--NO NAME--" && targetFile != ""
+            if a:is_write || s:EnoughTimePassed(now, last) || targetFile != last[2]
+                call s:Api(targetFile, now, a:is_write, last)
+            endif
         endif
-    endfunction
-
-    function! s:writeAction()
-        let targetFile = s:GetCurrentFile()
-        let now = localtime()
-        let last = s:GetLastAction()
-        call s:Api(targetFile, now, 1, last)
     endfunction
 
 " }}}
@@ -164,10 +177,10 @@ let s:VERSION = '3.0.9'
 
     augroup Wakatime
         autocmd!
-        autocmd BufEnter * call s:normalAction()
-        autocmd VimEnter * call s:normalAction()
-        autocmd BufWritePost * call s:writeAction()
-        autocmd CursorMoved,CursorMovedI * call s:normalAction()
+        autocmd BufEnter * call s:handleActivity(0)
+        autocmd VimEnter * call s:handleActivity(0)
+        autocmd BufWritePost * call s:handleActivity(1)
+        autocmd CursorMoved,CursorMovedI * call s:handleActivity(0)
     augroup END
 
 " }}}
