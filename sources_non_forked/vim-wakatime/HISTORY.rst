@@ -3,6 +3,22 @@ History
 -------
 
 
+4.0.3 (2015-06-23)
+++++++++++++++++++
+
+- fix offline logging
+- limit language detection to known file extensions, unless file contents has a vim modeline
+- upgrade wakatime cli to v4.0.16
+
+
+4.0.2 (2015-06-11)
+++++++++++++++++++
+
+- upgrade wakatime cli to v4.0.15
+- guess language using multiple methods, then use most accurate guess
+- use entity and type for new heartbeats api resource schema
+
+
 4.0.1 (2015-05-31)
 ++++++++++++++++++
 

@@ -54,3 +54,9 @@ let g:syntastic_html_checkers=['']
 """"""""""""""""""""""""""""""
 let g:ctrlsf_position = 'bottom'
 nmap <C-C> <Plug>CtrlSFPrompt
+
+""""""""""""""""""""""""""""""
+" => vim-easymotion
+""""""""""""""""""""""""""""""
+map  / <Plug>(easymotion-sn)
+omap / <Plug>(easymotion-tn)

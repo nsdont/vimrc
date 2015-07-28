@@ -1,4 +1,4 @@
-# vim-go [![Release](https://img.shields.io/github/release/fatih/vim-go.svg?style=flat-square)](https://github.com/fatih/vim-go/releases)
+# vim-go
 
 Go (golang) support for Vim. It comes with pre-defined sensible settings (like
 auto gofmt on save), has autocomplete, snippet support, improved syntax
@@ -75,6 +75,7 @@ completion (completion by type) install:
 [ultisnips](https://github.com/SirVer/ultisnips) or
 [neosnippet](https://github.com/Shougo/neosnippet.vim).
 * Screenshot color scheme is a slightly modified molokai: [fatih/molokai](https://github.com/fatih/molokai).
+* For a better documentation viewer checkout: [go-explorer](https://github.com/garyburd/go-explorer).
 
 ## Usage
 

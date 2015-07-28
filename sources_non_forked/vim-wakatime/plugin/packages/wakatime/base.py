@@ -19,6 +19,7 @@ import re
 import sys
 import time
 import traceback
+import socket
 try:
     import ConfigParser as configparser
 except ImportError:
@@ -34,7 +35,7 @@ from .offlinequeue import Queue
 from .packages import argparse
 from .packages import simplejson as json
 from .packages.requests.exceptions import RequestException
-from .project import find_project
+from .project import get_project_info
 from .session_cache import SessionCache
 from .stats import get_file_stats
 try:
@@ -161,6 +162,7 @@ def parseArguments(argv):
             help='optional project name')
     parser.add_argument('--alternate-project', dest='alternate_project',
             help='optional alternate project name; auto-discovered project takes priority')
+    parser.add_argument('--hostname', dest='hostname', help='hostname of current machine.')
     parser.add_argument('--disableoffline', dest='offline',
             action='store_false',
             help='disables offline time logging instead of queuing logged time')
@@ -303,7 +305,7 @@ def get_user_agent(plugin):
     return user_agent
 
 
-def send_heartbeat(project=None, branch=None, stats={}, key=None, targetFile=None,
+def send_heartbeat(project=None, branch=None, hostname=None, stats={}, key=None, targetFile=None,
         timestamp=None, isWrite=None, plugin=None, offline=None, notfile=False,
         hidefilenames=None, proxy=None, api_url=None, **kwargs):
     """Sends heartbeat as POST request to WakaTime api server.
@@ -314,14 +316,15 @@ def send_heartbeat(project=None, branch=None, stats={}, key=None, targetFile=Non
     log.debug('Sending heartbeat to api at %s' % api_url)
     data = {
         'time': timestamp,
-        'file': targetFile,
+        'entity': targetFile,
+        'type': 'file',
     }
     if hidefilenames and targetFile is not None and not notfile:
-        data['file'] = data['file'].rsplit('/', 1)[-1].rsplit('\\', 1)[-1]
-        if len(data['file'].strip('.').split('.', 1)) > 1:
-            data['file'] = u('HIDDEN.{ext}').format(ext=u(data['file'].strip('.').rsplit('.', 1)[-1]))
+        data['entity'] = data['entity'].rsplit('/', 1)[-1].rsplit('\\', 1)[-1]
+        if len(data['entity'].strip('.').split('.', 1)) > 1:
+            data['entity'] = u('HIDDEN.{ext}').format(ext=u(data['entity'].strip('.').rsplit('.', 1)[-1]))
         else:
-            data['file'] = u('HIDDEN')
+            data['entity'] = u('HIDDEN')
     if stats.get('lines'):
         data['lines'] = stats['lines']
     if stats.get('language'):
@@ -350,6 +353,8 @@ def send_heartbeat(project=None, branch=None, stats={}, key=None, targetFile=Non
         'Accept': 'application/json',
         'Authorization': auth,
     }
+    if hostname:
+        headers['X-Machine-Name'] = hostname
     proxies = {}
     if proxy:
         proxies['https'] = proxy
@@ -442,22 +447,15 @@ def main(argv=None):
         stats = get_file_stats(args.targetFile, notfile=args.notfile,
                                lineno=args.lineno, cursorpos=args.cursorpos)
 
-        project = None
+        project, branch = None, None
         if not args.notfile:
-            project = find_project(args.targetFile, configs=configs)
-        branch = None
-        project_name = args.project
-        if project:
-            branch = project.branch()
-            if not project_name:
-                project_name = project.name()
-        if not project_name:
-            project_name = args.alternate_project
+            project, branch = get_project_info(configs=configs, args=args)
 
         kwargs = vars(args)
-        kwargs['project'] = project_name
+        kwargs['project'] = project
         kwargs['branch'] = branch
         kwargs['stats'] = stats
+        kwargs['hostname'] = args.hostname or socket.gethostname()
 
         if send_heartbeat(**kwargs):
             queue = Queue()
@@ -470,6 +468,7 @@ def main(argv=None):
                     targetFile=heartbeat['file'],
                     timestamp=heartbeat['time'],
                     branch=heartbeat['branch'],
+                    hostname=kwargs['hostname'],
                     stats=json.loads(heartbeat['stats']),
                     key=args.key,
                     isWrite=heartbeat['is_write'],

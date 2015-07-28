@@ -226,9 +226,19 @@ function! syntastic#util#bufIsActive(buffer) abort " {{{2
     return 0
 endfunction " }}}2
 
-" start in directory a:where and walk up the parent folders until it
-" finds a file matching a:what; return path to that file
-function! syntastic#util#findInParent(what, where) abort " {{{2
+" start in directory a:where and walk up the parent folders until it finds a
+" file named a:what; return path to that file
+function! syntastic#util#findFileInParent(what, where) abort " {{{2
+    let old_suffixesadd = &suffixesadd
+    let &suffixesadd = ''
+    let file = findfile(a:what, escape(a:where, ' ') . ';')
+    let &suffixesadd = old_suffixesadd
+    return file
+endfunction " }}}2
+
+" start in directory a:where and walk up the parent folders until it finds a
+" file matching a:what; return path to that file
+function! syntastic#util#findGlobInParent(what, where) abort " {{{2
     let here = fnamemodify(a:where, ':p')
 
     let root = syntastic#util#Slash()
@@ -329,6 +339,17 @@ function! syntastic#util#stamp() abort " {{{2
     return split( split(reltimestr(reltime(g:_SYNTASTIC_START)))[0], '\.' )
 endfunction " }}}2
 
+let s:_str2float = function(exists('*str2float') ? 'str2float' : 'str2nr')
+lockvar s:_str2float
+
+function! syntastic#util#str2float(val) abort " {{{2
+    return s:_str2float(a:val)
+endfunction " }}}2
+
+function! syntastic#util#float2str(val) abort " {{{2
+    return s:_float2str(a:val)
+endfunction " }}}2
+
 " }}}1
 
 " Private functions {{{1
@@ -405,6 +426,17 @@ function! s:_rmrf(what) abort " {{{2
         silent! call delete(a:what)
     endif
 endfunction " }}}2
+
+function! s:_float2str_smart(val) abort " {{{2
+    return printf('%.1f', a:val)
+endfunction " }}}2
+
+function! s:_float2str_dumb(val) abort " {{{2
+    return a:val
+endfunction " }}}2
+
+let s:_float2str = function(has('float') ? 's:_float2str_smart' : 's:_float2str_dumb')
+lockvar s:_float2str
 
 " }}}1
 
